@@ -46,6 +46,8 @@ jobs:
           p.write_text(text)
           p = Path('Moa/RuntimeSmoke.swift')
           p.write_text(p.read_text().replace('"error": error.localizedDescription', '"error": String(describing: error)'))
+          p = Path('Moa/Runtime/PythonJSBridge.swift')
+          p.write_text(p.read_text().replace('guard let code = String(args[0])', 'guard let code = String(args)'))
           p = Path('project.yml')
           text = p.read_text()
           if 'libbz2.tbd' not in text:
