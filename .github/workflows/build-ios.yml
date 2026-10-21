@@ -38,6 +38,14 @@ jobs:
                   prefix, value = line.split(' = ', 1)
                   lines[i] = prefix + ' = PythonObject(' + value + ')'
           p.write_text('\n'.join(lines) + '\n')
+          text = p.read_text()
+          if 'import _scproxy' not in text:
+              shim = "    import sys, types\n    try:\n        import _scproxy\n    except ImportError:\n        _scproxy = types.ModuleType('_scproxy')\n        _scproxy._get_proxy_settings = lambda: {'exclude_simple': False, 'exceptions': []}\n        _scproxy._get_proxies = lambda: {}\n        sys.modules['_scproxy'] = _scproxy\n"
+              text = text.replace('    import subprocess\n', '    import subprocess\n' + shim)
+          text = text.replace('continuation.resume(throwing: error)', 'continuation.resume(throwing: MoaError.message(String(describing: error)))')
+          p.write_text(text)
+          p = Path('Moa/RuntimeSmoke.swift')
+          p.write_text(p.read_text().replace('"error": error.localizedDescription', '"error": String(describing: error)'))
           p = Path('project.yml')
           text = p.read_text()
           if 'libbz2.tbd' not in text:
