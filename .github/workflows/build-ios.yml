@@ -22,6 +22,18 @@ jobs:
         run: |
           sudo xcode-select -s /Applications/Xcode_26.0.app/Contents/Developer
           xcodebuild -version
+      - name: Apply Swift format compatibility fix
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('Moa/Runtime/Extractor.swift')
+          lines = p.read_text().splitlines()
+          for i, line in enumerate(lines):
+              if 'opts["format"] = ' in line and 'PythonObject(' not in line:
+                  prefix, value = line.split(' = ', 1)
+                  lines[i] = prefix + ' = PythonObject(' + value + ')'
+          p.write_text('\n'.join(lines) + '\n')
+          PY
       - name: Generate project
         run: |
           brew install xcodegen
@@ -41,6 +53,18 @@ jobs:
         with:
           name: MoaPlayer-iPhone
           path: source/MoaPlayer-iPhone-unsigned.ipa
+          retention-days: 7
+      - name: Simulator runtime and offline playback check
+        run: bash ci/simulator-smoke.sh
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: simulator-check
+          path: |
+            source/runtime-smoke.json
+            source/simulator-screen.png
+            source/simulator-build.log
+            source/simulator-runtime.log
           retention-days: 7
       - uses: actions/upload-artifact@v4
         if: failure()
