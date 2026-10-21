@@ -42,6 +42,8 @@ jobs:
           text = p.read_text()
           if 'libbz2.tbd' not in text:
               text = text.replace('    dependencies:\n', '    dependencies:\n      - sdk: libbz2.tbd\n', 1)
+          if 'ENABLE_DEBUG_DYLIB' not in text:
+              text = text.replace('        CODE_SIGNING_ALLOWED: NO', '        CODE_SIGNING_ALLOWED: NO\n        ENABLE_DEBUG_DYLIB: NO')
           p.write_text(text)
           p = Path('Moa/MoaApp.swift')
           text = p.read_text()
