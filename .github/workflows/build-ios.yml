@@ -33,6 +33,19 @@ jobs:
                   prefix, value = line.split(' = ', 1)
                   lines[i] = prefix + ' = PythonObject(' + value + ')'
           p.write_text('\n'.join(lines) + '\n')
+          p = Path('project.yml')
+          text = p.read_text()
+          if 'libbz2.tbd' not in text:
+              text = text.replace('    dependencies:\n', '    dependencies:\n      - sdk: libbz2.tbd\n', 1)
+          p.write_text(text)
+          p = Path('Moa/MoaApp.swift')
+          text = p.read_text()
+          if '@FocusState private var searchFocused' not in text:
+              text = text.replace('@State private var showHistory = false', '@State private var showHistory = false\n    @FocusState private var searchFocused: Bool')
+              text = text.replace('.submitLabel(.search)', '.submitLabel(.search).focused($searchFocused)')
+              text = text.replace('.onChange(of: query) { _, _ in showHistory = true }', '.onChange(of: query) { _, _ in if searchFocused { showHistory = true } }')
+              text = text.replace('query = value; showHistory = false', 'searchFocused = false; query = value; showHistory = false')
+          p.write_text(text)
           PY
       - name: Generate project
         run: |
