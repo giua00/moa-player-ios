@@ -1,6 +1,11 @@
 name: Build iPhone IPA
 on:
   workflow_dispatch:
+    inputs:
+      simulator_only:
+        description: Run only simulator verification
+        type: boolean
+        default: false
 permissions:
   contents: read
 concurrency:
@@ -46,16 +51,23 @@ jobs:
               text = text.replace('.onChange(of: query) { _, _ in showHistory = true }', '.onChange(of: query) { _, _ in if searchFocused { showHistory = true } }')
               text = text.replace('query = value; showHistory = false', 'searchFocused = false; query = value; showHistory = false')
           p.write_text(text)
+          p = Path('ci/simulator-smoke.sh')
+          text = p.read_text().replace('sorted(d,reverse=True)', 'sorted(d)')
+          bounded = '''python3 -c 'import subprocess,sys; subprocess.run(["xcrun","simctl","bootstatus",sys.argv[1],"-b"],timeout=180,check=True)' "$sim_id"'''
+          text = text.replace('xcrun simctl bootstatus "$sim_id" -b', bounded)
+          p.write_text(text)
           PY
       - name: Generate project
         run: |
           brew install xcodegen
           xcodegen generate
       - name: Build device app
+        if: ${{ !inputs.simulator_only }}
         run: |
           set -o pipefail
           xcodebuild -project Moa.xcodeproj -scheme Moa -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build | tee build.log
       - name: Package unsigned IPA
+        if: ${{ !inputs.simulator_only }}
         run: |
           mkdir -p package/Payload
           cp -R build/Build/Products/Release-iphoneos/Moa.app package/Payload/
@@ -63,6 +75,7 @@ jobs:
           cd package
           zip -qry ../MoaPlayer-iPhone-unsigned.ipa Payload
       - uses: actions/upload-artifact@v4
+        if: ${{ !inputs.simulator_only }}
         with:
           name: MoaPlayer-iPhone
           path: source/MoaPlayer-iPhone-unsigned.ipa
